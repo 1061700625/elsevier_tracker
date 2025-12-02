@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}管理员后台{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12 col-lg-10">
+    <h3 class="mb-4">
+      管理员后台
+      {% if is_admin %}
+      <a href="{{ url_for('admin_logout') }}" class="btn btn-sm btn-outline-light ms-3">退出</a>
+      {% endif %}
+    </h3>
+
+    {% if not is_admin %}
+    <!-- 未登录：显示密码输入框 -->
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          <div class="mb-3">
+            <label for="password" class="form-label">管理员密码</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              required
+            />
+          </div>
+          <button type="submit" class="btn btn-primary">登录</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <!-- 已登录：显示任务列表和下一次检查时间 -->
+    <div class="mb-3">
+      <strong>下一次定时检查时间：</strong>
+      {{ next_run_time or '暂无（可能调度器尚未启动）' }}
+    </div>
+
+    {% if tasks %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>UUID</th>
+            <th>通知方式</th>
+            <th>联系方式</th>
+            <th>创建时间</th>
+            <th>上次检查时间</th>
+            <th>最后状态</th>
+            <th>最后错误</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tasks %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ t.uuid }}</td>
+            <td>{{ '邮箱' if t.notify_type == 'email' else 'QQ' }}</td>
+            <td>{{ t.contact }}</td>
+            <td>{{ t.created_at }}</td>
+            <td>{{ t.last_checked_at or '—' }}</td>
+            <td>
+              {% if t.last_status is not none %}
+              {{ t.last_status }}<br />
+              <small class="text-muted">
+                {{
+                  {
+                    3: "Under Review",
+                    4: "Required Reviewers Complete",
+                    8: "With Editor",
+                    9: "Completed - Accept",
+                    11: "Revision and Reconsider",
+                    23: "Under Review",
+                    28: "Editor Invited",
+                    29: "Review Complete"
+                  }[t.last_status] if t.last_status in [3,4,8,9,11,23,28,29] else ('状态 ' ~ t.last_status)
+                }}
+              </small>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td>
+              {% if t.last_error %}
+              <span class="text-danger" style="white-space: pre-line;">{{ t.last_error }}</span>
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td>
+              <form
+                method="post"
+                action="{{ url_for('delete', uuid=t.uuid) }}"
+                onsubmit="return confirm('确认删除 {{ t.uuid }} 这个监控任务吗？');"
+              >
+                <button type="submit" class="btn btn-sm btn-danger">删除</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">当前没有任何监控任务。</div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

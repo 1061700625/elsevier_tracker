@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}提交监控任务{% endblock %}
+
+{% block content %}
+
+<!-- 说明部分：100% 全宽 -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="alert alert-info" style="line-height: 1.6; font-size: 1rem;">
+      <h4 class="fw-bold mb-3">📘 系统说明</h4>
+      <p>
+        本系统用于 <strong>自动监控稿件（Manuscript）在审稿系统中的状态变化</strong>。
+        提交稿件的 UUID 后，系统会定期检查状态，并在发生变化时自动通知您（邮箱或 QQ）。
+      </p>
+
+      <h5 class="fw-bold mt-4">🔧 使用方式</h5>
+      <ul>
+        <li>填写稿件 UUID（审稿系统提供的唯一标识）</li>
+        <li>选择通知方式（邮箱 / QQ）</li>
+        <li>填写对应的联系方式（邮箱地址或 QQ 号）</li>
+        <li>提交后系统将自动开始后台监控</li>
+        <li>状态发生变化时系统会自动发送提醒</li>
+        <li>您也可随时前往“查询页面”查看当前状态</li>
+        <li>项目已开源：https://github.com/1061700625/elsevier_tracker</li>
+      </ul>
+
+      <h5 class="fw-bold mt-4">🔒 隐私说明</h5>
+      <p>系统不会保存任何稿件内容，仅保存必要的信息用于监控与通知。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 提交部分：100% 全宽 -->
+<div class="row">
+  <div class="col-12">
+
+    <h3 class="mt-2">提交监控任务</h3>
+
+    <div class="card mt-3 p-4">
+      <form method="post">
+
+        <div class="mb-3">
+          <label for="uuid" class="form-label">UUID</label>
+          <input
+            type="text"
+            class="form-control"
+            id="uuid"
+            name="uuid"
+            placeholder="例如：fb353410-7228-4538-ac08-c9b428fb7afc"
+            required
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label d-block">通知方式</label>
+          <div class="form-check form-check-inline">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="notify_type"
+              id="notify_email"
+              value="email"
+              required
+            />
+            <label class="form-check-label" for="notify_email">邮箱</label>
+          </div>
+          <div class="form-check form-check-inline">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="notify_type"
+              id="notify_qq"
+              value="qq"
+              required
+            />
+            <label class="form-check-label" for="notify_qq">QQ</label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="contact" class="form-label">联系方式</label>
+          <input
+            type="text"
+            class="form-control"
+            id="contact"
+            name="contact"
+            placeholder="邮箱地址或 QQ 号"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary">提交 / 更新</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- 底部统计图（居中显示） -->
+<div class="row mt-5">
+  <div class="col-12">
+    <div style="display: flex; justify-content: center; align-items: center;">
+      <img src="https://count.getloli.com/@elsevier_tracker" alt="elsevier_tracker" />
+    </div>
+  </div>
+</div>
+{% endblock %}

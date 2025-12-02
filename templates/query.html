@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}查询状态{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6">
+    <h3>查询状态</h3>
+    <form method="post" class="mt-3 mb-4">
+      <div class="input-group">
+        <input
+          type="text"
+          class="form-control"
+          name="uuid"
+          placeholder="输入 uuid 查询"
+          value="{{ uuid or '' }}"
+          required
+        />
+        <button class="btn btn-secondary" type="submit">查询</button>
+      </div>
+    </form>
+
+    {% if task %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>当前任务配置</span>
+        <!-- 右上角也可以放删除按钮 -->
+        <form method="post" action="{{ url_for('delete', uuid=task.uuid) }}" onsubmit="return confirm('确认删除这个监控任务吗？');">
+          <button type="submit" class="btn btn-sm btn-danger">
+            删除任务
+          </button>
+        </form>
+      </div>
+      <div class="card-body">
+        <p><strong>UUID：</strong>{{ task.uuid }}</p>
+        <p><strong>通知方式：</strong>{{ '邮箱' if task.notify_type == 'email' else 'QQ' }}</p>
+        <p><strong>联系方式：</strong>{{ task.contact }}</p>
+        <p>
+          <strong>创建时间：</strong>{{ task.created_at }}
+        </p>
+        <p>
+          <strong>上次检查时间：</strong>{{ task.last_checked_at or '尚未检查' }}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+
+    {% if tracker_data %}
+    <div class="card mb-3">
+      <div class="card-header">远程状态</div>
+      <div class="card-body">
+        <p>
+          <strong>当前状态：</strong>{{ tracker_data['_status_desc'] }} ({{ tracker_data['Status'] }})
+        </p>
+        <p>
+          <strong>最后更新时间：</strong>{{ tracker_data['_last_updated_str'] }}
+        </p>
+        <p>
+          <strong>稿件标题：</strong>{{ tracker_data.get('ManuscriptTitle', '无标题') }}
+        </p>
+        <hr />
+        <h6>事件统计</h6>
+        <ul>
+          {% for k, v in tracker_data['_event_counts'].items() %}
+          <li>{{ k }}: {{ v }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    {% if has_changes %}
+    <div class="alert alert-info white-space-pre-line" style="white-space: pre-line;">
+      <strong>本次检查有变化，已发送通知：</strong><br />
+      {{ changes_message }}
+    </div>
+    {% else %}
+    <div class="alert alert-secondary">
+      本次检查未发现相对于上次的变化。
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
