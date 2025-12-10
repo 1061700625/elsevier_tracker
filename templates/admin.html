@@ -92,6 +92,12 @@
               {% endif %}
             </td>
             <td>
+              <!-- 删除按钮 - 改为调用函数打开弹框 -->
+              <button type="button" class="btn btn-sm btn-danger" onclick="openDeleteModal('{{ t.uuid }}', '{{ t.notify_type }}', '{{ t.contact }}')">
+                删除
+              </button>
+            </td>
+            <!-- <td>
               <form
                 method="post"
                 action="{{ url_for('delete', uuid=t.uuid) }}"
@@ -99,7 +105,7 @@
               >
                 <button type="submit" class="btn btn-sm btn-danger">删除</button>
               </form>
-            </td>
+            </td> -->
           </tr>
           {% endfor %}
         </tbody>
@@ -111,4 +117,70 @@
     {% endif %}
   </div>
 </div>
+
+<!-- 删除确认弹框 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">确认删除任务</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>您确定要删除 UUID 为 <strong id="deleteUuidText"></strong> 的监控任务吗？</p>
+        
+        <div class="mb-3">
+          <label for="deleteReason" class="form-label">删除理由（将发送给用户）</label>
+          <textarea class="form-control" id="deleteReason" rows="3" 
+                    placeholder="请输入删除此监控任务的理由..."></textarea>
+        </div>
+        
+        <div class="alert alert-warning">
+          注意：删除操作将停止对该稿件的监控，并会向用户发送通知。
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <form id="deleteForm" method="post" action="" style="display: inline;">
+          <input type="hidden" name="delete_reason" id="deleteReasonInput">
+          <input type="hidden" name="delete_by" value="admin">
+          <button type="submit" class="btn btn-danger">确认删除</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 打开删除确认弹框
+  function openDeleteModal(uuid, notifyType, contact) {
+    // 设置弹框内容
+    document.getElementById('deleteUuidText').textContent = uuid;
+    
+    // 设置删除表单的提交地址
+    document.getElementById('deleteForm').action = "{{ url_for('delete', uuid='__UUID__') }}".replace('__UUID__', uuid);
+    
+    // 清空删除理由
+    document.getElementById('deleteReason').value = '';
+    document.getElementById('deleteReasonInput').value = '';
+    
+    // 显示弹框
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+  }
+
+  // 当弹框显示时，将文本区域的内容同步到隐藏输入框
+  document.getElementById('deleteModal').addEventListener('shown.bs.modal', function () {
+    const reasonTextarea = document.getElementById('deleteReason');
+    const reasonInput = document.getElementById('deleteReasonInput');
+    
+    reasonTextarea.addEventListener('input', function() {
+      reasonInput.value = this.value;
+    });
+    
+    // 初始化值
+    reasonInput.value = reasonTextarea.value;
+  });
+</script>
+
 {% endblock %}

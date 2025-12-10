@@ -26,6 +26,7 @@
         <span>当前任务配置</span>
         <!-- 右上角也可以放删除按钮 -->
         <form method="post" action="{{ url_for('delete', uuid=task.uuid) }}" onsubmit="return confirm('确认删除这个监控任务吗？');">
+          <input type="hidden" name="delete_by" value="user">
           <button type="submit" class="btn btn-sm btn-danger">
             删除任务
           </button>

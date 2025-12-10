@@ -11,7 +11,7 @@
       <h4 class="fw-bold mb-3">📘 系统说明</h4>
       <p>
         本系统用于 <strong>自动监控稿件（Manuscript）在审稿系统中的状态变化</strong>。
-        提交稿件的 UUID 后，系统会定期检查状态，并在发生变化时自动通知您（邮箱或 QQ）。
+        提交稿件的 UUID 后，系统会定期检查状态，并在发生变化时自动通知您。
       </p>
 
       <h5 class="fw-bold mt-4">🔧 使用方式</h5>
@@ -19,10 +19,12 @@
         <li>填写稿件 UUID（审稿系统提供的唯一标识）</li>
         <li>选择通知方式（邮箱 / QQ）</li>
         <li>填写对应的联系方式（邮箱地址或 QQ 号）</li>
+        <li>(如果要使用QQ方式，请进Q群：768030842)</li>
         <li>提交后系统将自动开始后台监控</li>
         <li>状态发生变化时系统会自动发送提醒</li>
         <li>您也可随时前往“查询页面”查看当前状态</li>
         <li>项目已开源：https://github.com/1061700625/elsevier_tracker</li>
+        <li>注：请确保uuid在网页可显示 https://track.authorhub.elsevier.com/?uuid=xxx</li>
       </ul>
 
       <h5 class="fw-bold mt-4">🔒 隐私说明</h5>
@@ -47,7 +49,7 @@
             class="form-control"
             id="uuid"
             name="uuid"
-            placeholder="例如：fb353410-7228-4538-ac08-c9b428fb7afc"
+            placeholder="例如：xxx-xxx-xxx-xxx-xxx"
             required
           />
         </div>
@@ -90,7 +92,16 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary">提交 / 更新</button>
+        <div class="d-flex gap-2">
+          <button type="button" id="testBtn" class="btn btn-info">测试发送</button>
+          <button type="submit" class="btn btn-primary">提交/更新</button>
+        </div>
+      </form>
+      <!-- 测试通知的隐藏表单 -->
+      <form id="testForm" method="post" action="{{ url_for('test_notify') }}" style="display: none;">
+        <input type="hidden" name="uuid" id="test_uuid">
+        <input type="hidden" name="notify_type" id="test_notify_type">
+        <input type="hidden" name="contact" id="test_contact">
       </form>
     </div>
 
@@ -105,4 +116,33 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const testBtn = document.getElementById('testBtn');
+  const testForm = document.getElementById('testForm');
+  
+  testBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    // 获取表单数据
+    const uuid = document.getElementById('uuid').value;
+    const notifyType = document.querySelector('input[name="notify_type"]:checked');
+    const contact = document.getElementById('contact').value;
+
+    if (!uuid) {alert('请填写 UUID');return;}
+    if (!notifyType) {alert('请选择通知方式');return;}
+    if (!contact) {alert('请填写联系方式');return;}
+    // 确认是否要发送测试
+    if (confirm('是否要发送测试通知？系统将立即发送一条测试消息到您指定的邮箱或QQ。')) {
+      // 填充测试表单
+      document.getElementById('test_uuid').value = uuid;
+      document.getElementById('test_notify_type').value = notifyType.value;
+      document.getElementById('test_contact').value = contact;
+      
+      // 提交测试表单
+      testForm.submit();
+    }
+  });
+});
+</script>
 {% endblock %}

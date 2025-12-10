@@ -16,12 +16,15 @@ from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
 import yagmail
 
+# pip install flask flask_sqlalchemy requests apscheduler yagmail
+
 
 # =====================================
 # 配置
 # =====================================
 app = Flask(__name__)
 app.secret_key = "xxxx-xx-xxxx-xx-xx"  # !!!! 用于会话加密，实际部署时请更换为更复杂的密钥
+# SQLite 数据库，用于持久化任务信息
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///tracker.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
@@ -29,6 +32,7 @@ db = SQLAlchemy(app)
 # ====== 业务配置 ======
 MAIL_USER = "xxxx@qq.com" # !!!! 替换为你的 QQ 邮箱
 MAIL_PASS = "xxxx"        # !!!! 替换为你的 QQ 邮箱授权码
+
 TRACKER_URL_TEMPLATE = (
     "https://tnlkuelk67.execute-api.us-east-1.amazonaws.com/tracker/{uuid}"
 )
@@ -47,7 +51,7 @@ STATUS_MAP = {
     11: "Revision and Reconsider",
     23: "Under Review",
     28: "Editor Invited",
-    29: "Review Complete",
+    29: "Decision in Process",
 }
 
 
@@ -132,21 +136,6 @@ def send_email(to_addr: str, subject: str, body: str):
         print(f"[通知] 邮件已发送到 {to_addr}")
     except Exception as e:
         print(f"[通知] 邮件发送失败 ({to_addr}): {e}")
-
-
-def send_notification(task, message):
-    """
-    根据通知方式发送通知：
-    - QQ：调用原来的 NOTIFY_URL
-    - 邮箱：这里简单 print，你可以替换为真实发邮件逻辑
-    """
-    if task.notify_type == "qq":
-        do_send_notification_qq(task.contact, message)
-    elif task.notify_type == "email":
-        subject = f"稿件状态更新通知 - {task.uuid}"
-        send_email(task.contact, subject, message)
-    else:
-        print(f"[通知] 未知通知方式: {task.notify_type}")
 
 
 def safe_int(value, default=0):
@@ -247,6 +236,120 @@ def process_tracker_for_task(task, do_notify=True):
 
     return tracker_data, has_changes, changes_message, None
 
+# 表单验证函数
+def validate_form_data(uuid, notify_type, contact):
+    """
+    验证任务表单数据
+    返回: (is_valid, error_message)
+    """
+    if not uuid or not notify_type or not contact:
+        return False, "请填写完整信息（uuid / 通知方式 / 联系方式）"
+    
+    # 如果选邮箱，需要校验格式
+    if notify_type == "email":
+        if not is_valid_email(contact):
+            return False, "请输入正确的邮箱格式，例如 example@domain.com"
+    
+    if notify_type not in ("email", "qq"):
+        return False, "通知方式非法，只能选择邮箱或 QQ"
+    
+    return True, ""
+
+
+def send_notification(task, message):
+    """
+    根据通知方式发送通知：
+    - QQ：调用原来的 NOTIFY_URL
+    - 邮箱：这里简单 print，你可以替换为真实发邮件逻辑
+    """
+    if task.notify_type == "qq":
+        do_send_notification_qq(task.contact, message)
+    elif task.notify_type == "email":
+        subject = f"稿件状态更新通知 - {task.uuid}"
+        send_email(task.contact, subject, message)
+    else:
+        print(f"[通知] 未知通知方式: {task.notify_type}")
+
+def send_test_notification(task, status_report=""):
+    """
+    发送测试通知消息
+    返回: (success, message)
+    """
+    try:
+        base_message = (
+            f"📢 测试通知 - Elsevier Submission Tracker\n"
+            f"----------------------------------------\n"
+            f"✅ 通知测试成功！\n"
+            f"🔑 UUID: {task.uuid}\n"
+            f"📱 通知方式: {'邮箱' if task.notify_type == 'email' else 'QQ'}\n"
+            f"📞 联系方式: {task.contact}\n"
+            f"🕐 测试时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+            f"----------------------------------------\n"
+        )
+        if status_report:
+            full_message = base_message + "📊 稿件状态: " + status_report
+        else:
+            full_message = base_message + "系统已配置成功，将会在稿件状态变化时自动通知您。"
+        full_message += (
+            f"\n----------------------------------------\n"
+            f"您可以在查询页面查看详细状态: \n"
+            f"{request.host_url.rstrip('/')}{url_for('query', uuid=task.uuid)}"
+        )
+
+        if task.notify_type == "qq":
+            do_send_notification_qq(task.contact, full_message)
+            return True, "✅ 测试通知已发送，请检查QQ是否收到消息"
+        elif task.notify_type == "email":
+            subject = f"测试通知 - Elsevier Submission Tracker - {task.uuid}"
+            send_email(task.contact, subject, full_message)
+            return True, "✅ 测试通知已发送，请检查邮箱是否收到消息"
+        else:
+            return False, "❌ 未知通知方式"
+    except Exception as e:
+        return False, f"❌ 发送测试通知失败: {str(e)}"
+
+def send_delete_notification(uuid, notify_type, contact, delete_by, delete_reason):
+    """
+    发送删除通知给用户
+    """
+    try:
+        if delete_by == 'admin':
+            message = (
+                f"⚠️ 监控任务已被管理员删除 - Elsevier Submission Tracker\n"
+                f"----------------------------------------\n"
+                f"❌ 您的稿件监控任务已被管理员删除。\n"
+                f"🔑 UUID: {uuid}\n"
+                f"🗑️ 删除时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+                f"📝 删除理由: {delete_reason}\n"
+                f"----------------------------------------\n"
+                f"如果您对此有疑问，请联系系统管理员。\n"
+                f"您可以在提交页面重新提交该稿件的监控任务。\n"
+            )
+        else:  # 用户自行删除
+            message = (
+                f"✅ 监控任务已取消 - Elsevier Submission Tracker\n"
+                f"----------------------------------------\n"
+                f"您已成功取消对稿件的监控。\n"
+                f"🔑 UUID: {uuid}\n"
+                f"🗑️ 删除时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
+                f"----------------------------------------\n"
+                f"如果您需要重新监控此稿件，请在提交页面重新提交。\n"
+            )
+        
+        if notify_type == "qq":
+            do_send_notification_qq(contact, message)
+            print(f"[删除通知] QQ 删除通知已发送 -> {contact}")
+        elif notify_type == "email":
+            subject = f"监控任务已删除 - Elsevier Submission Tracker - {uuid}"
+            send_email(contact, subject, message)
+            print(f"[删除通知] 邮箱删除通知已发送 -> {contact}")
+        else:
+            print(f"[删除通知] 未知通知方式: {notify_type}")
+    except Exception as e:
+        print(f"[删除通知] 发送删除通知失败 ({uuid}): {e}")
+
+
+
 
 # =====================================
 # 后台定时任务
@@ -309,28 +412,19 @@ def submit():
         notify_type = request.form.get("notify_type", "").strip()
         contact = request.form.get("contact", "").strip()
 
-        if not uuid or not notify_type or not contact:
-            flash("请填写完整信息（uuid / 通知方式 / 联系方式）", "danger")
-            return redirect(url_for("submit"))
-
-        # 如果选邮箱，需要校验格式
-        if notify_type == "email":
-            if not is_valid_email(contact):
-                flash("请输入正确的邮箱格式，例如 example@domain.com", "danger")
-                return redirect(url_for("submit"))
-
-        if notify_type not in ("email", "qq"):
-            flash("通知方式非法，只能选择邮箱或 QQ", "danger")
+        is_valid, error_msg = validate_form_data(uuid, notify_type, contact)
+        if not is_valid:
+            flash(error_msg, "danger")
             return redirect(url_for("submit"))
 
         task = TrackerTask.query.filter_by(uuid=uuid).first()
         if task:
-            # 更新已有记录
+            # 更新记录
             task.notify_type = notify_type
             task.contact = contact
             flash("已更新该 uuid 的通知配置", "success")
         else:
-            # 新建
+            # 新建记录
             task = TrackerTask(
                 uuid=uuid,
                 notify_type=notify_type,
@@ -343,6 +437,35 @@ def submit():
         return redirect(url_for("query", uuid=uuid))
 
     return render_template("submit.html")
+
+
+@app.route("/test_notify", methods=["POST"])
+def test_notify():
+    """测试通知功能：立即发送一条测试消息给用户"""
+    uuid = request.form.get("uuid", "").strip()
+    notify_type = request.form.get("notify_type", "").strip()
+    contact = request.form.get("contact", "").strip()
+    
+    is_valid, error_msg = validate_form_data(uuid, notify_type, contact)
+    if not is_valid:
+        flash(error_msg, "danger")
+        return redirect(url_for("submit"))
+    
+    task = TrackerTask(
+        uuid=uuid,
+        notify_type=notify_type,
+        contact=contact,
+    )
+    tracker_data = fetch_tracker_data(task.uuid)
+    if tracker_data: 
+        status = tracker_data.get("Status")
+        status_report = STATUS_MAP.get(status, status)
+    else: 
+        status_report = "获取远程数据失败"
+    success, message = send_test_notification(task, status_report)
+    flash(message, "danger")
+    
+    return redirect(url_for("submit"))
 
 
 @app.route("/query", methods=["GET", "POST"])
@@ -394,11 +517,17 @@ def delete(uuid):
     if not task:
         flash("要删除的任务不存在。", "warning")
         return redirect(url_for("query"))
-
+    # 删除任务
     db.session.delete(task)
     db.session.commit()
-    flash(f"已删除 uuid = {uuid} 的监控任务。", "success")
-    return redirect(url_for("submit"))
+    # 获取删除理由和删除来源
+    delete_reason = request.form.get("delete_reason", "").strip()
+    delete_by = request.form.get("delete_by", "user")
+    send_delete_notification(uuid, task.notify_type, task.contact, delete_by, delete_reason)
+    flash(f"已删除 uuid = {uuid} 的监控任务。" + (f"已发送删除通知。" if delete_reason else ""), "success")
+
+    if delete_by == 'admin': return redirect(url_for("admin"))
+    else: return redirect(url_for("submit"))
 
 
 # =====================================
@@ -455,6 +584,6 @@ if __name__ == "__main__":
     # 先启动调度器，再启动 Flask
     scheduler.start()
     try:
-        app.run(host="0.0.0.0", port=5000, debug=True)
+        app.run(host="0.0.0.0", port=8081, debug=True)
     finally:
         scheduler.shutdown()
