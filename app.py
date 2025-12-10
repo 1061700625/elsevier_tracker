@@ -46,6 +46,7 @@ CHECK_INTERVAL = 3600  # 每小时
 STATUS_MAP = {
     3: "Under Review",
     4: "Required Reviewers Complete",
+    7: "Revise",
     8: "With Editor",
     9: "Completed - Accept",
     11: "Revision and Reconsider",
@@ -587,4 +588,5 @@ if __name__ == "__main__":
         app.run(host="0.0.0.0", port=8081, debug=True)
     finally:
         scheduler.shutdown()
+
 
