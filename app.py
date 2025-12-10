@@ -131,7 +131,7 @@ def do_send_notification_qq(target_id, message):
 def send_email(to_addr: str, subject: str, body: str):
     """使用 yagmail 发送邮件"""
     try:
-        yag = yagmail.SMTP(user=MAIL_USER, password=MAIL_PASS, host="smtp.qq.com", encoding='GBK')
+        yag = yagmail.SMTP(user=MAIL_USER, password=MAIL_PASS, host="smtp.qq.com", encoding='utf-8')
         yag.send(to=to_addr, subject=subject, contents=body)
         print(f"[通知] 邮件已发送到 {to_addr}")
     except Exception as e:
@@ -587,3 +587,4 @@ if __name__ == "__main__":
         app.run(host="0.0.0.0", port=8081, debug=True)
     finally:
         scheduler.shutdown()
+
