@@ -53,6 +53,7 @@ STATUS_MAP = {
     23: "Under Review",
     28: "Editor Invited",
     29: "Decision in Process",
+    39: "Review Complete",
 }
 
 
@@ -350,6 +351,25 @@ def send_delete_notification(uuid, notify_type, contact, delete_by, delete_reaso
         print(f"[删除通知] 发送删除通知失败 ({uuid}): {e}")
 
 
+def extract_uuid(s: str):
+    s = (s or "").strip()
+    # 如果是 URL：从 ?uuid= 里取
+    try:
+        u = urlparse(s)
+        if u.scheme in ("http", "https") and u.netloc:
+            qs = parse_qs(u.query)
+            if qs.get("uuid"): s = qs["uuid"][0].strip()
+    except Exception:
+        pass
+    # 兜底：如果用户粘贴了包含 uuid=xxx 的文本
+    m = re.search(r"uuid=([0-9a-fA-F-]{36})", s)
+    if m: s = m.group(1)
+    # 最终校验并规范化（小写标准格式）
+    try:
+        return str(uuidlib.UUID(s))
+    except Exception:
+        return None
+
 
 
 # =====================================
@@ -416,6 +436,11 @@ def submit():
         is_valid, error_msg = validate_form_data(uuid, notify_type, contact)
         if not is_valid:
             flash(error_msg, "danger")
+            return redirect(url_for("submit"))
+
+        uuid = extract_uuid(uuid)
+        if not uuid:
+            flash("UUID 格式不正确，或链接中未包含 uuid 参数。", "danger")
             return redirect(url_for("submit"))
 
         task = TrackerTask.query.filter_by(uuid=uuid).first()
@@ -491,15 +516,17 @@ def query():
     has_changes = False
 
     if uuid:
+        uuid = extract_uuid(uuid)
+        if not uuid:
+            flash("UUID 格式不正确，或链接中未包含 uuid 参数。", "danger")
+            return redirect(url_for("query"))
+
         task = TrackerTask.query.filter_by(uuid=uuid).first()
         if not task:
             flash("该 uuid 尚未在系统中登记，请先在提交页面创建。", "warning")
         else:
-            tracker_data, has_changes, changes_message, err = process_tracker_for_task(
-                task, do_notify=True
-            )
-            if err:
-                flash(f"获取远程数据失败：{err}", "danger")
+            tracker_data, has_changes, changes_message, err = process_tracker_for_task(task, do_notify=True)
+            if err: flash(f"获取远程数据失败：{err}", "danger")
 
     return render_template(
         "query.html",
@@ -588,5 +615,6 @@ if __name__ == "__main__":
         app.run(host="0.0.0.0", port=8081, debug=True)
     finally:
         scheduler.shutdown()
+
 
 
