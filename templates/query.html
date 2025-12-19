@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}查询状态{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 col-lg-8">
+    <h3 class="mb-3">查询状态</h3>
+
+    <ul class="nav nav-tabs" id="queryTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab != 'article' %}active{% endif %}" id="q-sub-tab"
+                data-bs-toggle="tab" data-bs-target="#q-sub-pane" type="button" role="tab">
+          Submission
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'article' %}active{% endif %}" id="q-art-tab"
+                data-bs-toggle="tab" data-bs-target="#q-art-pane" type="button" role="tab">
+          Article
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 rounded-bottom p-3 mb-4" id="queryTabsContent">
+      <!-- Submission query -->
+      <div class="tab-pane fade {% if active_tab != 'article' %}show active{% endif %}" id="q-sub-pane" role="tabpanel">
+        <form method="post" class="mt-2">
+          <input type="hidden" name="task_type" value="submission" />
+          <div class="input-group">
+            <input type="text" class="form-control" name="uuid" placeholder="输入 uuid 或包含 uuid=... 的链接"
+                   value="{{ uuid or '' }}" />
+            <button class="btn btn-secondary" type="submit">查询</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Article query -->
+      <div class="tab-pane fade {% if active_tab == 'article' %}show active{% endif %}" id="q-art-pane" role="tabpanel">
+        <form method="post" class="mt-2">
+          <input type="hidden" name="task_type" value="article" />
+          <div class="mb-2">
+            <input type="text" class="form-control" name="article_url"
+                   placeholder="可粘贴 Article URL（含 aid/jid/surname）" />
+          </div>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <input type="text" class="form-control" name="aid" placeholder="aid" />
+            </div>
+            <div class="col-md-4">
+              <input type="text" class="form-control" name="jid" placeholder="jid" />
+            </div>
+            <div class="col-md-4">
+              <input type="text" class="form-control" name="surname" placeholder="surname" />
+            </div>
+          </div>
+          <div class="mt-2">
+            <button class="btn btn-secondary" type="submit">查询</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===================== Submission result ===================== -->
+    {% if active_tab != 'article' and task %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>当前 Submission 任务配置</span>
+        <form method="post" action="{{ url_for('delete', uuid=task.uuid) }}"
+              onsubmit="return confirm('确认删除这个监控任务吗？');">
+          <input type="hidden" name="delete_by" value="user">
+          <button type="submit" class="btn btn-sm btn-danger">删除任务</button>
+        </form>
+      </div>
+      <div class="card-body">
+        <p><strong>UUID：</strong>{{ task.uuid }}</p>
+        <p><strong>通知方式：</strong>{{ '邮箱' if task.notify_type == 'email' else 'QQ' }}</p>
+        <p><strong>联系方式：</strong>{{ task.contact }}</p>
+        <p><strong>最近检查：</strong>{{ task.last_checked_at or '-' }}</p>
+        {% if task.last_error %}
+          <div class="alert alert-danger mb-0">最近一次错误：{{ task.last_error }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if tracker_data %}
+    <div class="card mb-3">
+      <div class="card-header">远程状态</div>
+      <div class="card-body">
+        <p><strong>Status：</strong>{{ tracker_data.get('_status_desc') }}</p>
+        <p><strong>LastUpdated：</strong>{{ tracker_data.get('_last_updated_str') }}</p>
+        <p><strong>事件统计：</strong></p>
+        <pre class="mb-0">{{ tracker_data.get('_event_counts') | tojson(indent=2, ensure_ascii=False) }}</pre>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if changes_message %}
+    <div class="alert {% if has_changes %}alert-warning{% else %}alert-secondary{% endif %}">
+      <pre class="mb-0">{{ changes_message }}</pre>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- ===================== Article result ===================== -->
+    {% if active_tab == 'article' and article_task %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>当前 Article 任务配置</span>
+        <form method="post" action="{{ url_for('delete_article', article_key=article_task.article_key) }}"
+              onsubmit="return confirm('确认删除这个 Article 监控任务吗？');">
+          <input type="hidden" name="delete_by" value="user">
+          <button type="submit" class="btn btn-sm btn-danger">删除任务</button>
+        </form>
+      </div>
+      <div class="card-body">
+        <p><strong>Article Key：</strong>{{ article_task.article_key }}</p>
+        <p><strong>aid/jid/surname：</strong>{{ article_task.aid }} / {{ article_task.jid }} / {{ article_task.surname }}</p>
+        <p><strong>URL：</strong><a href="{{ article_task.url }}" target="_blank">{{ article_task.url }}</a></p>
+        <p><strong>通知方式：</strong>{{ '邮箱' if article_task.notify_type == 'email' else 'QQ' }}</p>
+        <p><strong>联系方式：</strong>{{ article_task.contact }}</p>
+        <p><strong>最近检查：</strong>{{ article_task.last_checked_at or '-' }}</p>
+        {% if article_task.last_error %}
+          <div class="alert alert-danger mb-0">最近一次错误：{{ article_task.last_error }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if snapshot %}
+    <div class="card mb-3">
+      <div class="card-header">Article 快照</div>
+      <div class="card-body">
+        <p><strong>LastUpdatedDate：</strong>{{ snapshot.get('lastUpdatedDate') }}</p>
+        <p><strong>Status comment：</strong>{{ snapshot.get('statusComment') }}</p>
+        <p class="mb-2"><strong>Production events：</strong></p>
+        {% set events = snapshot.get('productionEvents') or [] %}
+        {% if not events %}
+          <div class="text-muted">(none)</div>
+        {% else %}
+          <ul class="mb-0">
+            {% for e in events %}
+              <li>{{ e.get('date','') }} — {{ e.get('event','') }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if changes_message %}
+    <div class="alert {% if has_changes %}alert-warning{% else %}alert-secondary{% endif %}">
+      <pre class="mb-0">{{ changes_message }}</pre>
+    </div>
+    {% endif %}
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

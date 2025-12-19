@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}提交监控任务{% endblock %}
+
+{% block content %}
+
+<!-- 说明部分：100% 全宽（保留原有说明，并补充 Article 说明） -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="alert alert-info" style="line-height: 1.6; font-size: 1rem;">
+      <h4 class="fw-bold mb-3">📘 系统说明</h4>
+      <p>
+        本系统用于 <strong>自动监控稿件（Manuscript）在审稿系统中的状态变化</strong>。
+        提交稿件的 UUID 后，系统会定期检查状态，并在发生变化时自动通知您。
+      </p>
+
+      <h5 class="fw-bold mt-4">🔧 使用方式（Submission 监控）</h5>
+      <ul>
+        <li>填写稿件 UUID（审稿系统提供的唯一标识）</li>
+        <li>选择通知方式（邮箱 / QQ）</li>
+        <li>填写对应的联系方式（邮箱地址或 QQ 号）</li>
+        <li>(若要使用QQ方式，请进Q群咨询群主：768030842)</li>
+        <li>提交后系统将自动开始后台监控</li>
+        <li>状态发生变化时系统会自动发送提醒</li>
+        <li>您也可随时前往“查询页面”查看当前状态</li>
+        <li>项目已开源：https://github.com/1061700625/elsevier_tracker</li>
+        <li>注：请确保uuid在网页可显示 https://track.authorhub.elsevier.com/?uuid=xxx</li>
+      </ul>
+
+      <h5 class="fw-bold mt-4">📰 Article 监控（生产进度）</h5>
+      <ul class="mb-0">
+        <li>切换到下方 <strong>“Article 监控”</strong> 标签页</li>
+        <li>可直接粘贴作者追踪页 URL，系统会自动解析其中的 <code>aid / jid / surname</code> 并填充；也可手工填写</li>
+        <li>URL 示例：<code>https://authors.elsevier.com/tracking/article/details.do?aid=108030&jid=NN&surname=Song</code></li>
+        <li>系统会监控：<code>LastUpdatedDate</code>、<code>Status comment</code>、<code>Production events</code> 的变化</li>
+      </ul>
+
+      <h5 class="fw-bold mt-4">🔒 隐私说明</h5>
+      <p class="mb-0">系统不会保存任何稿件内容，仅保存必要的信息用于监控与通知。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 提交部分：100% 全宽 -->
+<div class="row">
+  <div class="col-12">
+
+    <h3 class="mt-2">提交监控任务</h3>
+
+    <div class="card mt-3 p-4">
+
+      <ul class="nav nav-tabs" id="taskTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="sub-tab" data-bs-toggle="tab" data-bs-target="#sub-pane" type="button" role="tab">
+            Submission 监控
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="art-tab" data-bs-toggle="tab" data-bs-target="#art-pane" type="button" role="tab">
+            Article 监控
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content border border-top-0 rounded-bottom p-3" id="taskTabsContent">
+        <!-- ===================== Submission ===================== -->
+        <div class="tab-pane fade show active" id="sub-pane" role="tabpanel" aria-labelledby="sub-tab">
+          <form method="post" class="mt-2" id="submissionForm">
+            <input type="hidden" name="task_type" value="submission" />
+
+            <div class="mb-3">
+              <label class="form-label">UUID（或包含 uuid=... 的链接）</label>
+              <input
+                type="text"
+                class="form-control"
+                name="uuid"
+                id="sub_uuid"
+                placeholder="例如：xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx 或 tracking 链接"
+                required
+              />
+              <div class="form-text">系统会自动从链接/文本中提取 uuid。</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label d-block">通知方式</label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="notify_type" id="sub_notify_email" value="email" required />
+                <label class="form-check-label" for="sub_notify_email">邮箱</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="notify_type" id="sub_notify_qq" value="qq" required />
+                <label class="form-check-label" for="sub_notify_qq">QQ</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="sub_contact" class="form-label">联系方式</label>
+              <input
+                type="text"
+                class="form-control"
+                id="sub_contact"
+                name="contact"
+                placeholder="邮箱地址或 QQ 号"
+                required
+              />
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="button" id="sub_test_btn" class="btn btn-info">测试发送</button>
+              <button type="submit" class="btn btn-primary">提交/更新</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ===================== Article ===================== -->
+        <div class="tab-pane fade" id="art-pane" role="tabpanel" aria-labelledby="art-tab">
+          <form method="post" class="mt-2" id="articleForm">
+            <input type="hidden" name="task_type" value="article" />
+
+            <div class="mb-3">
+              <label class="form-label">Article 追踪 URL（可选）</label>
+              <input
+                type="text"
+                class="form-control"
+                name="article_url"
+                id="art_url"
+                placeholder="https://authors.elsevier.com/tracking/article/details.do?aid=...&jid=...&surname=..."
+              />
+              <div class="form-text">若粘贴 URL，系统会自动解析并填充 aid/jid/surname；也可手动填写三项参数。</div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">aid</label>
+                <input type="text" class="form-control" name="aid" id="art_aid" placeholder="例如：108030" />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">jid</label>
+                <input type="text" class="form-control" name="jid" id="art_jid" placeholder="例如：NN" />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">surname</label>
+                <input type="text" class="form-control" name="surname" id="art_surname" placeholder="例如：Song" />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label d-block">通知方式</label>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="notify_type" id="art_notify_email" value="email" required />
+                <label class="form-check-label" for="art_notify_email">邮箱</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="notify_type" id="art_notify_qq" value="qq" required />
+                <label class="form-check-label" for="art_notify_qq">QQ</label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="art_contact" class="form-label">联系方式</label>
+              <input
+                type="text"
+                class="form-control"
+                id="art_contact"
+                name="contact"
+                placeholder="邮箱地址或 QQ 号"
+                required
+              />
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="button" id="art_test_btn" class="btn btn-info">测试发送</button>
+              <button type="submit" class="btn btn-primary">提交/更新</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- 测试通知的隐藏表单（复用后端 /test_notify） -->
+      <form id="testForm" method="post" action="{{ url_for('test_notify') }}" style="display: none;">
+        <input type="hidden" name="task_type" id="test_task_type">
+        <input type="hidden" name="uuid" id="test_uuid">
+        <input type="hidden" name="article_url" id="test_article_url">
+        <input type="hidden" name="aid" id="test_aid">
+        <input type="hidden" name="jid" id="test_jid">
+        <input type="hidden" name="surname" id="test_surname">
+        <input type="hidden" name="notify_type" id="test_notify_type">
+        <input type="hidden" name="contact" id="test_contact">
+      </form>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- 底部统计图（居中显示） -->
+<div class="row mt-5">
+  <div class="col-12">
+    <div style="display: flex; justify-content: center; align-items: center;">
+      <img src="https://count.getloli.com/@elsevier_tracker" alt="elsevier_tracker" />
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function parseQuery(url) {
+    try {
+      const u = new URL(url);
+      return {
+        aid: u.searchParams.get('aid') || '',
+        jid: u.searchParams.get('jid') || '',
+        surname: u.searchParams.get('surname') || '',
+      };
+    } catch (e) {
+      return {aid:'', jid:'', surname:''};
+    }
+  }
+
+  // 自动解析 article URL（input/blur 都尝试）
+  const artUrl = document.getElementById('art_url');
+  function tryFillFromUrl(){
+    const v = (artUrl.value || '').trim();
+    if(!v) return;
+    const p = parseQuery(v);
+    if(p.aid) document.getElementById('art_aid').value = p.aid;
+    if(p.jid) document.getElementById('art_jid').value = p.jid;
+    if(p.surname) document.getElementById('art_surname').value = p.surname;
+  }
+  artUrl.addEventListener('input', tryFillFromUrl);
+  artUrl.addEventListener('blur', tryFillFromUrl);
+  artUrl.addEventListener('change', tryFillFromUrl);
+
+  function sendTest(payload){
+    // 简单校验（避免空提交）
+    if(payload.task_type === 'submission'){
+      if(!payload.uuid){ alert('请填写 UUID'); return; }
+    } else if(payload.task_type === 'article'){
+      if(!(payload.article_url || (payload.aid && payload.jid && payload.surname))){
+        alert('请提供 Article URL，或分别填写 aid / jid / surname'); return;
+      }
+    }
+    if(!payload.notify_type){ alert('请选择通知方式'); return; }
+    if(!payload.contact){ alert('请填写联系方式'); return; }
+
+    if (!confirm('是否要发送测试通知？系统将立即发送一条测试消息到您指定的邮箱或QQ。')) return;
+
+    document.getElementById('test_task_type').value = payload.task_type || '';
+    document.getElementById('test_uuid').value = payload.uuid || '';
+    document.getElementById('test_article_url').value = payload.article_url || '';
+    document.getElementById('test_aid').value = payload.aid || '';
+    document.getElementById('test_jid').value = payload.jid || '';
+    document.getElementById('test_surname').value = payload.surname || '';
+    document.getElementById('test_notify_type').value = payload.notify_type || '';
+    document.getElementById('test_contact').value = payload.contact || '';
+    document.getElementById('testForm').submit();
+  }
+
+  // Submission test
+  document.getElementById('sub_test_btn').addEventListener('click', function(e){
+    e.preventDefault();
+    const notifyRadio = document.querySelector('#sub-pane input[name="notify_type"]:checked');
+    sendTest({
+      task_type: 'submission',
+      uuid: document.getElementById('sub_uuid').value.trim(),
+      notify_type: notifyRadio ? notifyRadio.value : '',
+      contact: document.getElementById('sub_contact').value.trim(),
+    });
+  });
+
+  // Article test
+  document.getElementById('art_test_btn').addEventListener('click', function(e){
+    e.preventDefault();
+    const notifyRadio = document.querySelector('#art-pane input[name="notify_type"]:checked');
+    sendTest({
+      task_type: 'article',
+      article_url: document.getElementById('art_url').value.trim(),
+      aid: document.getElementById('art_aid').value.trim(),
+      jid: document.getElementById('art_jid').value.trim(),
+      surname: document.getElementById('art_surname').value.trim(),
+      notify_type: notifyRadio ? notifyRadio.value : '',
+      contact: document.getElementById('art_contact').value.trim(),
+    });
+  });
+
+})();
+</script>
+
+{% endblock %}
