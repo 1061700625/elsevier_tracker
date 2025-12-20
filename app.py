@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import re
 import requests
 import time
@@ -20,6 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import yagmail
 from urllib.parse import urlparse, parse_qs
 import uuid as uuidlib
+CST = timezone(timedelta(hours=8))
 
 # pip install flask flask_sqlalchemy requests apscheduler yagmail
 
@@ -470,7 +471,8 @@ def fetch_tracker_data(uuid):
 def do_send_notification_qq(target_id, message):
     """发送 QQ 通知"""
     try:
-        params = {"target": target_id, "key": API_KEY, "msg": message}
+        now_str = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S CST")
+        params = {"target": target_id, "key": API_KEY, "msg": f"[{now_str}]\n{message}"}
         response = requests.get(NOTIFY_URL, params=params, timeout=10)
         if response.status_code == 200:
             print(f"[通知] QQ 通知已发送成功 -> {target_id}")
@@ -483,8 +485,9 @@ def do_send_notification_qq(target_id, message):
 def send_email(to_addr: str, subject: str, body: str):
     """使用 yagmail 发送邮件"""
     try:
+        now_str = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S CST")
         yag = yagmail.SMTP(user=MAIL_USER, password=MAIL_PASS, host="smtp.qq.com", encoding='utf-8')
-        yag.send(to=to_addr, subject=subject, contents=body)
+        yag.send(to=to_addr, subject=subject, contents=f"[{now_str}]\n{body}")
         print(f"[通知] 邮件已发送到 {to_addr}")
     except Exception as e:
         print(f"[通知] 邮件发送失败 ({to_addr}): {e}")
