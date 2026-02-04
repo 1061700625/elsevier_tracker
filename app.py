@@ -55,14 +55,14 @@ STATUS_MAP = {
     4: "Required Reviewers Complete",
     7: "Revise",
     8: "With Editor",
-    9: "Completed - Accept",
+    9: "Completed Accept",
     11: "Revision and Reconsider",
     23: "Under Review",
     28: "Editor Invited",
     29: "Decision in Process",
     39: "Review Complete",
+    48: "Completed Accept",
 }
-
 
 
 # ====== Article tracking（authors.elsevier.com）配置 ======
