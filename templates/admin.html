@@ -157,9 +157,19 @@
         <p>您确定要删除 <strong id="deleteTaskText"></strong> 的监控任务吗？</p>
 
         <div class="mb-3">
+          <label class="form-label">预设删除理由</label>
+          <div class="d-flex flex-wrap gap-2 mb-2" id="deleteReasonPresets">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reason="恭喜 Accept，吸一口欧气~">恭喜 Accept</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reason="数据获取失败，请检查 uuid 是否正确。">数据获取失败</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reason="重复提交任务，已为您保留另一条有效监控记录。">重复提交</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reason="监控参数不完整或无效，请确认后重新提交。">参数无效</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-reason="该任务已无需继续监控，如有需要可重新提交。">无需继续监控</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-reason="">清空</button>
+          </div>
           <label for="deleteReason" class="form-label">删除理由（将发送给用户，可不填）</label>
           <textarea class="form-control" id="deleteReason" rows="3"
-                    placeholder="请输入删除此监控任务的理由..."></textarea>
+                    placeholder="可直接点上方预设，也可在这里补充或修改理由..."></textarea>
+          <div class="form-text">点击预设理由后会自动填入文本框，您仍可继续编辑。</div>
         </div>
 
         <div class="alert alert-warning mb-0">
@@ -201,9 +211,23 @@
     deleteModal.show();
   }
 
-  document.getElementById('deleteReason').addEventListener('input', function(){
-    document.getElementById('deleteReasonInput').value = this.value;
+  function syncDeleteReason() {
+    document.getElementById('deleteReasonInput').value = document.getElementById('deleteReason').value.trim();
+  }
+
+  document.getElementById('deleteReason').addEventListener('input', syncDeleteReason);
+
+  document.querySelectorAll('#deleteReasonPresets [data-reason]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const textarea = document.getElementById('deleteReason');
+      textarea.value = this.dataset.reason || '';
+      syncDeleteReason();
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
   });
+
+  document.getElementById('deleteForm').addEventListener('submit', syncDeleteReason);
 </script>
 
 {% endblock %}

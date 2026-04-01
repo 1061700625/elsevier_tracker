@@ -677,7 +677,10 @@ def send_delete_notification(uuid, notify_type, contact, delete_by, delete_reaso
                 f"❌ 您的稿件监控任务已被管理员删除。\n"
                 f"🔑 UUID: {uuid}\n"
                 f"🗑️ 删除时间: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC\n"
-                f"📝 删除理由: {delete_reason}\n"
+            )
+            if delete_reason:
+                message += f"📝 删除理由: {delete_reason}\n"
+            message += (
                 f"----------------------------------------\n"
                 f"如果您对此有疑问，请联系系统管理员。\n"
                 f"您可以在提交页面重新提交该稿件的监控任务。\n"
@@ -692,7 +695,7 @@ def send_delete_notification(uuid, notify_type, contact, delete_by, delete_reaso
                 f"----------------------------------------\n"
                 f"如果您需要重新监控此稿件，请在提交页面重新提交。\n"
             )
-        
+
         if notify_type == "qq":
             do_send_notification_qq(contact, message)
             print(f"[删除通知] QQ 删除通知已发送 -> {contact}")
@@ -704,8 +707,6 @@ def send_delete_notification(uuid, notify_type, contact, delete_by, delete_reaso
             print(f"[删除通知] 未知通知方式: {notify_type}")
     except Exception as e:
         print(f"[删除通知] 发送删除通知失败 ({uuid}): {e}")
-
-
 def extract_uuid(s: str):
     s = (s or "").strip()
     # 如果是 URL：从 ?uuid= 里取
@@ -1049,7 +1050,10 @@ def delete_article(article_key):
     # 和 submission 保持一致：删除后给用户发通知（理由可空）
     send_delete_notification_article(task, delete_by, delete_reason)
 
-    flash(f"已删除 article = {article_key} 的监控任务。已发送删除通知。", "success")
+    flash(
+        f"已删除 article = {article_key} 的监控任务。" + ("已发送删除通知。" if delete_reason else ""),
+        "success"
+    )
 
     if delete_by == "admin":
         return redirect(url_for("admin"))
