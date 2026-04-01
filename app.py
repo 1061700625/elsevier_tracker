@@ -14,6 +14,7 @@ from flask import (
     url_for,
     flash,
     session,
+    jsonify,
 )
 from flask_sqlalchemy import SQLAlchemy
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -125,10 +126,19 @@ class ArticleTask(db.Model):
     last_error = db.Column(db.Text)
 
 
+class AppStats(db.Model):
+    __tablename__ = "app_stats"
+
+    id = db.Column(db.Integer, primary_key=True)
+    helped_total = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 with app.app_context():
     db.create_all()
+    if AppStats.query.first() is None:
+        db.session.add(AppStats(helped_total=0))
+        db.session.commit()
 
 
 # =====================================
@@ -1058,6 +1068,18 @@ def delete_article(article_key):
     if delete_by == "admin":
         return redirect(url_for("admin"))
     return redirect(url_for("submit"))
+
+@app.route("/api_stats")
+def api_stats():
+    """返回前端展示所需的站点统计信息"""
+    stats = AppStats.query.first()
+    helped_total = stats.helped_total if stats else 0
+    return jsonify({
+        "helped_total": helped_total,
+        "submission_task_count": TrackerTask.query.count(),
+        "article_task_count": ArticleTask.query.count(),
+    })
+
 
 # =====================================
 # 管理员页面
