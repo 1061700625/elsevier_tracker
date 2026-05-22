@@ -511,7 +511,14 @@ def safe_int(value, default=0):
         return int(digits[0]) if digits else default
     return default
 
-
+def increment_helped_total():
+    stats = AppStats.query.first()
+    if stats is None:
+        stats = AppStats(helped_total=0)
+        db.session.add(stats)
+        db.session.flush()
+    stats.helped_total += 1
+    
 def count_review_events(summary):
     """统计最新 Revision 的特定事件数量（基于 ReviewSummary）"""
     return {
@@ -848,6 +855,7 @@ def submit():
                     contact=contact,
                 )
                 db.session.add(task)
+                increment_helped_total()
                 flash("已创建 Article 监控任务", "success")
 
             db.session.commit()
@@ -873,6 +881,7 @@ def submit():
         else:
             task = TrackerTask(uuid=uuid, notify_type=notify_type, contact=contact)
             db.session.add(task)
+            increment_helped_total()
             flash("已创建监控任务", "success")
 
         db.session.commit()
