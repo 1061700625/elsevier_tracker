@@ -54,7 +54,10 @@
             <td><a href="{{ url_for('query', uuid=t.uuid) }}">{{ t.uuid }}</a></td>
             <td>
               {% if t.last_status is not none %}
-                <span class="badge bg-info text-dark">{{ status_map.get(t.last_status) or ('状态 ' ~ t.last_status) }}</span>
+                {% set status_text = status_map.get(t.last_status) or ('状态 ' ~ t.last_status) %}
+                <span class="badge {% if 'Accept' in status_text %}bg-success{% else %}bg-info text-dark{% endif %}">
+                  {{ status_text }}
+                </span>
                 <small class="text-muted ms-1">({{ t.last_status }})</small>
                 {% if t.event_counts %}
                   <div class="small text-muted">
